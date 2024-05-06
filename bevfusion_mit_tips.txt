@@ -1,0 +1,114 @@
+安装环境：
+
+查询cuda版本(https://www.cnblogs.com/sqwblog/p/16934614.html) 
+nvcc -V (本机CUDA 11.7)
+在pytorch官网找到对应版本安装语句
+pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.html -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+安装mmcv：
+pip install mmcv-full==1.4.0 -f https://download.openmmlab.com/mmcv/dist/cu111/torch1.9.0/index.html -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+pip安装：tqdm   torchpack   nuscenes-devkit
+pip install tqdm -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+conda安装：openmpi
+
+shapely==1.8.0 (卸载原有的2.0.0重装)
+
+切换镜像源：
+豆瓣：http://pypi.douban.com/simple/
+清华：https://pypi.tuna.tsinghua.edu.cn/simple
+阿里云：http://mirrors.aliyun.com/pypi/simple/
+山东理工大学：http://pypi.sdutlinux.org/
+中国科技大学 https://pypi.mirrors.ustc.edu.cn/simple/
+华中科技大学：http://pypi.hustunique.com/
+
+setup.py算力部分（22-25行）
+本机：NVIDIA GeForce RTX 3090（算力86）
+查看显卡型号：https://blog.csdn.net/maizousidemao/article/details/88821949
+查看显卡算力：https://blog.csdn.net/qq_33692331/article/details/115919893
+             nvidia官网：https://developer.nvidia.com/cuda-gpus#compute
+             
+cuda11与gcc10不兼容
+（https://blog.csdn.net/qq_42178122/article/details/123566497）
+本机与gcc9兼容，与gcc7不兼容
+
+pycharm卡死：
+ps -e|grep java
+kill -s 9 'PID'
+
+
+报错：
+FileNotFoundError: [Errno 2] No such file or directory: ‘.gitignore‘：    conda install git
+
+attributeError:moudle 'distutils' has no attribute 'version':
+(1)3060老机子修改setuptools版本管用   见网址 https://zhuanlan.zhihu.com/p/556704117?utm_id=0
+(2)3090新机子：https://blog.csdn.net/qq_42076902/article/details/129261266
+             修改这个文件：/home/dell/anaconda3/envs/bevfusion-mit/lib/python3.8/site-packages/torch/utils/tensorboard/__init__.py   注释掉 line 4-7，10
+
+ 关于conda：
+ conda info --envs  查询已有的环境
+ conda  创建环境
+conda create -n bevfusion-new python=3.8
+
+跑代码命令行：
+参照github上md文件
+在nuscenes-mini数据集上跑
+https://github.com/open-mmlab/mmdetection3d/blob/master/docs/en/datasets/nuscenes_det.md
+Dataset Preparation时，命令尾部加上--version v1.0-mini
+（1）根据数据集创建pkl文件：python tools/create_data.py nuscenes --root-path ./data/nuscenes --out-dir ./data/nuscenes --extra-tag nuscenes --version v1.0-mini
+（2）评估：torchpack dist-run -np 3 python tools/test.py configs/nuscenes/det/transfusion/secfpn/camera+lidar/swint_v0p075/convfuser.yaml /home/dell/wkq/BEVFusion-mit/run3_full/run_1.875_6.1_1.1/latest.pth --eval bbox   pth是train.py之后生成的权重文件
+（3）可视化：torchpack dist-run -np 3 python tools/visualize.py configs/nuscenes/det/transfusion/secfpn/camera+lidar/swint_v0p075/convfuser.yaml --checkpoint pretrained/bevfusion-det.pth --out-dir /dataset/viz/fusion-det-pred --mode pred --bbox-score 0.1
+torchpack dist-run -np 3 python tools/visualize.py configs/nuscenes/det/transfusion/secfpn/camera+lidar/swint_v0p075/convfuser.yaml --out-dir /home/dell/wkq/BEVFusion-mit/run/full/baseline/gt/viz/ --mode gt --bbox-score 0.1
+（4）从中断的地方继续训练（加上 --resume_from）：torchpack dist-run -np 3 -v python tools/train.py configs/nuscenes/det/transfusion/secfpn/camera+lidar/swint_v0p075/convfuser.yaml --model.encoders.camera.backbone.init_cfg.checkpoint pretrained/swint-nuimages-pretrained.pth --resume_from /data/workdirs/MIT-BEVFUSION-OFFICIAL/bevfusion_lidar-cam_voxel0075_second_secfpn_8xb4-cyclic-20e_nus-3d-5239b1af.pth --run-dir /data/workdirs/bevfusion/resume_portion05/
+ （5）训练：torchpack dist-run -np 3 -v python tools/train.py configs/nuscenes/det/transfusion/secfpn/camera+lidar/swint_v0p075/convfuser.yaml --model.encoders.camera.backbone.init_cfg.checkpoint pretrained/swint-nuimages-pretrained.pth --load_from pretrained/lidar-only-det.pth --run-dir /home/dell/wkq/BEVFusion-mit/run/empty
+（6）生成新的test.pkl: torchpack dist-run -np 3 python tools/test.py configs/nuscenes/det/transfusion/secfpn/camera+lidar/swint_v0p075/convfuser.yaml  /home/dell/wkq/BEVFusion-mit/run/full/official_mvp/latest.pth  --out  /home/dell/wkq/BEVFusion-mit/run/full/official_mvp/test.pkl --format-only --eval-options 'jsonfile_prefix=/home/dell/wkq/BEVFusion-mit/run/full/official_mvp/test.pkl'
+https://github.com/mit-han-lab/bevfusion/issues/233#issue-1451781214
+
+改代码:
+batchsize：/home/dell/wkq/bevfusion-main/configs/nuscenes/default.yaml    261-262行，4改成了1
+lr：三个地方（下面写的源码中原来的数值）
+（1） configs/nuscenes/det/centerhead/lssfpn/default.yaml  22行  lr: 2.0e-4
+（2） configs/nuscenes/det/transfusion/secfpn/default.yaml  35行  lr: 1.0e-4
+（3） configs/nuscenes/det/transfusion/secfpn/camera+lidar/default.yaml  60行  lr: 2.0e-4
+(4) seg  /home/dell/wkq/BEVFusion-mit/bevfusion-main/configs/nuscenes/seg/fusion-bev256d2-lss.yaml  line 112  1.0e-4
+
+swin权重文件地址，3个地方：
+（1）configs/nuscenes/seg/fusion-bev256d2-lss.yaml   line22
+（2）configs/nuscenes/seg/camera-bev256d2.yaml   line23
+（3）configs/nuscenes/det/transfusion/secfpn/camera+lidar/swint_v0p075/default.yaml   line25
+
+剪裁上1/4：
+/home/dell/wkq/BEVFusion-mit/bevfusion-main/mmdet3d/datasets/pipelines/transforms_3d.py  line70  72
+
+
+配准代码：
+my_sample = nusc.sample[10]
+nusc.render_pointcloud_in_image(my_sample['token'], pointsensor_channel='LIDAR_TOP')
+print(my_sample)
+打印出的结果中‘timestamp’中的编号   sweep中图片雷达编号   除去后五位一致
+
+点云可视化环境：
+conda install  pyqt=5.9.2
+
+
+可视化时，修改验证集val,两个地方：
+（1）重写pkl，改 configs/nuscenes/default.yaml  line279为新pkl的绝对路径
+（2）splits.py  val划分（/home/dell/anaconda3/envs/bevfusion-mit/lib/python3.8/site-packages/nuscenes/utils/splits.py）
+
+torchpack dist-run -np 3 python tools/train.py configs/nuscenes/det/transfusion/secfpn/camera+lidar/swint_v0p075/convfuser.yaml --model.encoders.camera.backbone.init_cfg.checkpoint pretrained/swint-nuimages-pretrained.pth --load_from pretrained/lidar-only-det.pth --run-dir /home/dell/wkq/BEVFusion-mit/run/run3/run_1.875_6.1_1.1_pre
+
+单独训练Lidar
+torchpack dist-run -np 3 python tools/train.py configs/nuscenes/det/transfusion/secfpn/lidar/voxelnet_0p075.yaml --run-dir /home/dell/wkq/BEVFusion-mit/run/run3/empty/mvp_lidar
+修改/home/dell/wkq/BEVFusion-mit/bevfusion-main/configs/nuscenes/det/transfusion/secfpn/default.yaml 将lr->2.0 e-5
+/home/dell/wkq/BEVFusion-mit/bevfusion-main/mmdet3d/datasets/pipelines/loading.py
+修改line 380 381 382
+torchpack dist-run -np 3 python tools/train.py configs/nuscenes/det/transfusion/secfpn/camera+lidar/swint_v0p075/convfuser.yaml --model.encoders.camera.backbone.init_cfg.checkpoint pretrained/swint-nuimages-pretrained.pth --load_from /home/dell/wkq/BEVFusion-mit/run/run3/empty/mvp_lidar/epoch_4.pth --run-dir /home/dell/wkq/BEVFusion-mit/run/empty/lidar54_img
+
+seg  run train
+torchpack dist-run -np 3 python tools/train.py configs/nuscenes/seg/fusion-bev256d2-lss.yaml --model.encoders.camera.backbone.init_cfg.checkpoint pretrained/swint-nuimages-pretrained.pth
+
+
+multi task run 
+
+torchpack dist-run -np 3 python tools/train.py configs/nuscenes/seg/fusion-bev256d2-lss.yaml --model.encoders.camera.backbone.init_cfg.checkpoint pretrained/swint-nuimages-pretrained.pth --run-dir /data/workdirs/bevfusion-multitask/baseline
