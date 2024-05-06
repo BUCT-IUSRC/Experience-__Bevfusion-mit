@@ -1,0 +1,119 @@
+1、安装ddad相关环境 安装dgp   参考链接：https://github.com/TRI-ML/dgp/blob/master/docs/VIRTUAL_ENV.md
+
+conda create --name ddad python=3.9
+conda activate ddad
+pip install --upgrade pip -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install cython==0.29.30 numpy==1.20.3 -i https://pypi.tuna.tsinghua.edu.cn/simple
+进入/home/dell/desf/code/dgp-master文件夹
+pip install -r requirements.txt -r requirements-dev.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+	Building wheels for collected packages: Pillow-SIMD报错 加：sudo apt-get install libjpeg-dev
+pip install --editable . -i https://pypi.tuna.tsinghua.edu.cn/simple
+make test
+dgp_cli --help
+pip install jupyter 
+
+
+2、kitti o 数据集格式
+	  data
+   └── dataset
+       ├── poses_dvso
+       │   ├── 00.txt
+       │   ├── 01.txt
+       │   ├── ...
+       └── sequences
+           ├── 00
+           |   ├── calib.txt
+           |   ├── image_2
+           |   ├── image_depth_annotated
+           |   ├── mvobj_mask
+           |   └── times.txt
+           ├── ...
+
+3、数据集转换
+calib.txt 用pose转换 times.txt用timestamp减出来
+判断/data/kitti/data_depth_annotated/train/2011_09_26_drive_0001_sync/proj_depth/groundtruth/image_02中图片格式,使用16位存储
+
+4、ddad数据集格式
+
+	DDAD
+	----ddad_train_val
+   	    |----000000
+		 |----image_depth_annotated
+		    |----camera_01
+		 |----rgb
+		    |----camera_01
+		    |----camera_05
+		    |----camera_06
+		 |----calib.txt
+		 |----times.txt
+	    |----000001
+	    |----000002
+	    
+	    
+5、配置新环境ddad-dmd
+# create a clean conda environment from scratch
+conda create --name dymultidepth python=3.7
+conda activate dymultidepth
+# install pip
+conda install ipython
+conda install pip
+# install required packages
+pip install -r requirements.txt
+-i https://pypi.tuna.tsinghua.edu.cn/simple
+
+
+6、配置 spflownet
+CONDAENV=/home/dell/anaconda3/envs/ddad_dmd
+cd SPFlowNet/lib/ply_c/
+cmake . -DPYTHON_LIBRARY=$CONDAENV/lib/libpython3.9m.so -DPYTHON_INCLUDE_DIR=$CONDAENV/include/python3.9m -DBOOST_INCLUDEDIR=$CONDAENV/include -DEIGEN3_INCLUDE_DIR=$CONDAENV/include/eigen3
+修改路径
+conda install -c conda-forge boost>=1.82.0
+conda install -c conda-forge eigen
+/home/dell/anaconda3/envs/ddad_dmd/lib/python3.9/site-packages/numpy/core/include/numpy
+/home/dell/anaconda3/envs/ddad_dmd/include/boost/python/numpy/
+
+rm -rf CMakeFiles CMakeCache.txt
+cmake . -DPYTHON_LIBRARY=$CONDAENV/lib/libpython3.9m.so -DPYTHON_INCLUDE_DIR=$CONDAENV/include/python3.9m -DBOOST_INCLUDEDIR=$CONDAENV/include -DEIGEN3_INCLUDE_DIR=$CONDAENV/include/eigen3
+make
+(base) dell@dell-Precision-7920-Tower:~/anaconda3/envs/ddad_dmd/include$ sudo ln -sf eigen3/Eigen Eigen
+make
+cd ../../
+cd lib/pointops 
+pip install torchvision==0.11+cu111 torchaudio==0.10.1 -f https://download.pytorch.org/whl/torch_stable.html -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install torch==1.9.1+cu111 torchvision==0.10.1+cu111 torchaudio==0.9.1 -f https://download.pytorch.org/whl/torch_stable.html -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install /home/dell/wkq/torch/torch-1.9.1+cu111-cp39-cp39-linux_x86_64.whl /home/dell/wkq/torch/torchvision-0.10.1+cu111-cp39-cp39-linux_x86_64.whl /home/dell/wkq/torch/torchaudio-0.9.1-cp39-cp39-linux_x86_64.whl 
+
+python setup.py install && cd ../../
+
+
+python train.py --config configs/train/train_mr_resnet18.json
+pandas                    2.2.1 冲突    numpy                     1.22.3 安装pandas==1.5
+
+pip install mmcv-full==1.4.0 -f https://download.openmmlab.com/mmcv/dist/cu111/torch1.9.0/index.html -i https://pypi.tuna.tsinghua.edu.cn/simple
+7、训练
+python train.py --config configs/train/train_mr_effinetb5_ddad.json 
+
+8、修改data读取方式
+https://github.com/TRI-ML/packnet-sfm/blob/master/packnet_sfm/datasets/dgp_dataset.py
+https://github.com/TRI-ML/packnet-sfm/blob/de53b310533ff6b01eaa23a8ba5ac01bac5587b1/docs/_sources/configs/configs.eval_ddad.rst.txt#L25
+
+https://github.com/qcraftai/gedepth/blob/e782d65aa9615a5bdf2d844bc7d0770c11710ae5/configs/depthformer/depthformer_v_ddad.py#L8
+https://github.com/qcraftai/gedepth/blob/e782d65aa9615a5bdf2d844bc7d0770c11710ae5/depth/datasets/ddad.py#L278
+
+attributeError:moudle 'distutils' has no attribute 'version':
+(1)3060老机子修改setuptools版本管用   见网址 https://zhuanlan.zhihu.com/p/556704117?utm_id=0
+(2)3090新机子：https://blog.csdn.net/qq_42076902/article/details/129261266
+             修改这个文件：/home/dell/anaconda3/envs/bevfusion-mit/lib/python3.8/site-packages/torch/utils/tensorboard/__init__.py   注释掉 line 4-7，10
+
+git checkout 9617e65ad351558636de5586a48db848eab578c6
+git config --global http.proxy http://127.0.0.1:7890
+git clone https://github.com/TRI-ML/dgp.git
+
+8、评估
+python evaluate.py --config configs/evaluate/eval_mr_effinetb5ddad.json
+9、
+def generate_depth_map(self, sample_idx, datum_idx, filename):
+这个函数有问题，读出来的深度图是空的。
+目前先生成对应png，读文件夹
+10、
+log存放路径/data/workdirs/desf/saved_model_DDAD_effinetflow/log/dy_multi_depth/00
